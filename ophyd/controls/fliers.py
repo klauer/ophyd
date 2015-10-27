@@ -46,7 +46,62 @@ class AreaDetectorTimeseriesCollector:
         self.stop()
 
     def stop(self):
-        self._pv_tscontrol.put(2, wait=True) # Stop Collection
+        self._pv_tscontrol.put(2, wait=True)  # Stop Collection
+
+    def describe(self):
+        return [{self._name: {'source': self._pv_basename,
+                              'dtype': 'number',
+                              'shape': None}}, ]
+
+
+class WaveformCollector:
+    def __init__(self, name, pv_basename, data_is_time=True):
+        self._name = name
+        self._pv_basename = pv_basename
+        self._pv_sel = PV("{}Sw-Sel".format(pv_basename))
+        self._pv_rst = PV("{}Rst-Sel".format(pv_basename))
+        self._pv_wfrm_n = PV("{}Val:TimeN-I".format(pv_basename),
+                             auto_monitor=False)
+        self._pv_wfrm = PV("{}Val:Time-Wfrm".format(pv_basename),
+                           auto_monitor=False)
+        self._pv_wfrm_nord = PV("{}Val:Time-Wfrm.NORD".format(pv_basename),
+                                auto_monitor=False)
+        self._cb = None
+        self._data_is_time = data_is_time
+        self.done = True
+
+    def _get_wfrm(self):
+        if self._pv_wfrm_n.get():
+            return self._pv_wfrm.get(count=int(self._pv_wfrm_nord.get()))
+        else:
+            return []
+
+    def kickoff(self):
+        # Put us in reset mode
+        self._pv_sel.put(2, wait=True)
+        # Trigger processing
+        self._pv_rst.put(1, wait=True)
+        # Start Buffer
+        self._pv_sel.put(1, wait=True)
+        # make status object
+        status = StatusBase()
+        # it always done, the scan should never even try to wait for this
+        status._finished()
+        return status
+
+    def collect(self):
+        payload = self._get_wfrm()
+        if len(payload) == 0:
+            return
+        for i, v in enumerate(payload):
+            x = v if self._data_is_time else i
+            ev = {'data': {self._name: x},
+                  'timestamps': {self._name: v},
+                  'time': v}
+            yield ev
+
+    def stop(self):
+        self._pv_sel.put(0, wait=True)  # Stop Collection
 
     def describe(self):
         return [{self._name: {'source': self._pv_basename,
