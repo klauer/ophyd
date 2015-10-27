@@ -1,5 +1,8 @@
+import time as ttime
+
 import epics
-from .ophydobj import SatusBase
+from .ophydobj import StatusBase
+
 
 class AreaDetectorTimeseriesCollector:
     def __init__(self, name, pv_basename, num_points=1000000):
