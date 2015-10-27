@@ -1,6 +1,7 @@
 import time as ttime
 
-import epics
+from epics import PV
+
 from .ophydobj import StatusBase
 
 
@@ -10,13 +11,13 @@ class AreaDetectorTimeseriesCollector:
         self._pv_basename = pv_basename
         self.num_points = num_points
 
-        self._pv_tscontrol = epics.PV("{}TSControl".format(pv_basename))
-        self._pv_num_points = epics.PV("{}TSNumPoints".format(pv_basename))
-        self._pv_cur_point = epics.PV("{}TSCurrentPoint".format(pv_basename))
-        self._pv_wfrm = epics.PV("{}TSTotal".format(pv_basename),
-                                 auto_monitor=False)
-        self._pv_wfrm_ts = epics.PV("{}TSTimestamp".format(pv_basename),
-                                    auto_monitor=False)
+        self._pv_tscontrol = PV("{}TSControl".format(pv_basename))
+        self._pv_num_points = PV("{}TSNumPoints".format(pv_basename))
+        self._pv_cur_point = PV("{}TSCurrentPoint".format(pv_basename))
+        self._pv_wfrm = PV("{}TSTotal".format(pv_basename),
+                           auto_monitor=False)
+        self._pv_wfrm_ts = PV("{}TSTimestamp".format(pv_basename),
+                              auto_monitor=False)
 
     def _get_wfrms(self):
         n = self._pv_cur_point.get()
