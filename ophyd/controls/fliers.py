@@ -38,12 +38,13 @@ class AreaDetectorTimeseriesCollector:
         return status
 
     def collect(self):
+        self.stop()
         payload_val, payload_time = self._get_wfrm()
         for v, t in zip(payload_val, payload_time):
             yield {'data': {self._name: v},
                    'timestamps': {self._name: t},
                    'time': ttime.time()}
-        self.stop()
+
 
     def stop(self):
         self._pv_tscontrol.put(2, wait=True)  # Stop Collection
@@ -90,6 +91,7 @@ class WaveformCollector:
         return status
 
     def collect(self):
+        self.stop()
         payload = self._get_wfrm()
         if len(payload) == 0:
             return
