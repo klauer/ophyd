@@ -67,9 +67,7 @@ class WaveformCollector:
                            auto_monitor=False)
         self._pv_wfrm_nord = PV("{}Val:Time-Wfrm.NORD".format(pv_basename),
                                 auto_monitor=False)
-        self._cb = None
         self._data_is_time = data_is_time
-        self.done = True
 
     def _get_wfrm(self):
         if self._pv_wfrm_n.get():
