@@ -1,38 +1,48 @@
 import time as ttime
 
-from epics import PV
+from .signal import (Signal, EpicsSignal, EpicsSignalRO)
+from .ophydobj import DeviceStatus
+from .device import (Device, Component as C)
 
-from .ophydobj import StatusBase
 
+class AreaDetectorTimeseriesCollector(Device):
+    ts_control = C(EpicsSignal, "TSControl")
+    ts_num_points = C(EpicsSignal, "TSNumPoints")
+    ts_cur_point = C(EpicsSignalRO, "TSCurrentPoint")
+    ts_wfrm = C(EpicsSignalRO, "TSTotal", auto_monitor=False)
+    ts_wfrm_ts = C(EpicsSignalRO, "TSTimestamp", auto_monitor=False)
+    num_points = C(Signal)
 
-class AreaDetectorTimeseriesCollector:
-    def __init__(self, name, pv_basename, num_points=1000000):
-        self._name = name
-        self._pv_basename = pv_basename
-        self.num_points = num_points
+    def __init__(self, prefix, *, read_attrs=None, configuration_attrs=None,
+                 monitor_attrs=None, name=None, parent=None,
+                 num_points=1000000, **kwargs):
+        if read_attrs is None:
+            read_attrs = []
 
-        self._pv_tscontrol = PV("{}TSControl".format(pv_basename))
-        self._pv_num_points = PV("{}TSNumPoints".format(pv_basename))
-        self._pv_cur_point = PV("{}TSCurrentPoint".format(pv_basename))
-        self._pv_wfrm = PV("{}TSTotal".format(pv_basename),
-                           auto_monitor=False)
-        self._pv_wfrm_ts = PV("{}TSTimestamp".format(pv_basename),
-                              auto_monitor=False)
+        if configuration_attrs is None:
+            configuration_attrs = []
+
+        super().__init__(prefix, read_attrs=read_attrs,
+                         configuration_attrs=configuration_attrs,
+                         monitor_attrs=monitor_attrs,
+                         name=name, parent=parent, **kwargs)
+
+        self.num_points.put(num_points)
 
     def _get_wfrms(self):
-        n = self._pv_cur_point.get()
+        n = self.ts_cur_point.get()
         if n:
-            return (self._pv_wfrm.get(count=n),
-                    self._pv_wfrm_ts.get(count=n))
+            return (self.ts_wfrm.get(count=n),
+                    self.ts_wfrm_ts.get(count=n))
         else:
             return ([], [])
 
     def kickoff(self):
-        self._pv_num_points.put(self.num_points, wait=True)
+        self.ts_num_points.put(self.num_points.get(), wait=True)
         # Erase buffer and start collection
-        self._pv_tscontrol.put(0, wait=True)
+        self.ts_control.put(0, wait=True)
         # make status object
-        status = StatusBase()
+        status = DeviceStatus()
         # it always done, the scan should never even try to wait for this
         status._finished()
         return status
@@ -41,49 +51,60 @@ class AreaDetectorTimeseriesCollector:
         self.stop()
         payload_val, payload_time = self._get_wfrm()
         for v, t in zip(payload_val, payload_time):
-            yield {'data': {self._name: v},
-                   'timestamps': {self._name: t},
+            yield {'data': {self.name: v},
+                   'timestamps': {self.name: t},
                    'time': ttime.time()}
 
-
     def stop(self):
-        self._pv_tscontrol.put(2, wait=True)  # Stop Collection
+        self.ts_control.put(2, wait=True)  # Stop Collection
 
     def describe(self):
-        return [{self._name: {'source': self._pv_basename,
-                              'dtype': 'number',
-                              'shape': None}}, ]
+        return [{self.name: {'source': 'PV:{}'.format(self.prefix),
+                             'dtype': 'number',
+                             'shape': None}}, ]
+
+    def _repr_info(self):
+        yield from super()._repr_info()
+        yield ('num_points', self.num_points.get())
 
 
-class WaveformCollector:
-    def __init__(self, name, pv_basename, data_is_time=True):
-        self._name = name
-        self._pv_basename = pv_basename
-        self._pv_sel = PV("{}Sw-Sel".format(pv_basename))
-        self._pv_rst = PV("{}Rst-Sel".format(pv_basename))
-        self._pv_wfrm_n = PV("{}Val:TimeN-I".format(pv_basename),
-                             auto_monitor=False)
-        self._pv_wfrm = PV("{}Val:Time-Wfrm".format(pv_basename),
-                           auto_monitor=False)
-        self._pv_wfrm_nord = PV("{}Val:Time-Wfrm.NORD".format(pv_basename),
-                                auto_monitor=False)
-        self._data_is_time = data_is_time
+class WaveformCollector(Device):
+    ts_sel = C(EpicsSignal, "Sw-Sel")
+    ts_rst = C(EpicsSignal, "Rst-Sel")
+    ts_wfrm_n = C(EpicsSignalRO, "Val:TimeN-I", auto_monitor=False)
+    ts_wfrm = C(EpicsSignalRO, "Val:Time-Wfrm", auto_monitor=False)
+    ts_wfrm_nord = C(EpicsSignalRO, "Val:Time-Wfrm.NORD", auto_monitor=False)
+    data_is_time = C(Signal)
+
+    def __init__(self, prefix, *, read_attrs=None, configuration_attrs=None,
+                 monitor_attrs=None, name=None, parent=None,
+                 data_is_time=True, **kwargs):
+        if read_attrs is None:
+            read_attrs = []
+
+        if configuration_attrs is None:
+            configuration_attrs = []
+
+        super().__init__(prefix, read_attrs=read_attrs,
+                         configuration_attrs=configuration_attrs,
+                         monitor_attrs=monitor_attrs,
+                         name=name, parent=parent, **kwargs)
 
     def _get_wfrm(self):
-        if self._pv_wfrm_n.get():
-            return self._pv_wfrm.get(count=int(self._pv_wfrm_nord.get()))
+        if self.ts_wfrm_n.get():
+            return self.ts_wfrm.get(count=int(self.ts_wfrm_nord.get()))
         else:
             return []
 
     def kickoff(self):
         # Put us in reset mode
-        self._pv_sel.put(2, wait=True)
+        self.ts_sel.put(2, wait=True)
         # Trigger processing
-        self._pv_rst.put(1, wait=True)
+        self.ts_rst.put(1, wait=True)
         # Start Buffer
-        self._pv_sel.put(1, wait=True)
+        self.ts_sel.put(1, wait=True)
         # make status object
-        status = StatusBase()
+        status = DeviceStatus()
         # it always done, the scan should never even try to wait for this
         status._finished()
         return status
@@ -94,16 +115,20 @@ class WaveformCollector:
         if len(payload) == 0:
             return
         for i, v in enumerate(payload):
-            x = v if self._data_is_time else i
-            ev = {'data': {self._name: x},
-                  'timestamps': {self._name: v},
+            x = v if self.data_is_time.get() else i
+            ev = {'data': {self.name: x},
+                  'timestamps': {self.name: v},
                   'time': v}
             yield ev
 
     def stop(self):
-        self._pv_sel.put(0, wait=True)  # Stop Collection
+        self.ts_sel.put(0, wait=True)  # Stop Collection
 
     def describe(self):
-        return [{self._name: {'source': self._pv_basename,
-                              'dtype': 'number',
-                              'shape': None}}, ]
+        return [{self.name: {'source': 'PV:{}'.format(self.prefix),
+                             'dtype': 'number',
+                             'shape': None}}, ]
+
+    def _repr_info(self):
+        yield from super()._repr_info()
+        yield ('data_is_time', self.data_is_time.get())
