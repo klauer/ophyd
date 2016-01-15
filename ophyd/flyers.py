@@ -90,6 +90,8 @@ class WaveformCollector(Device):
                          monitor_attrs=monitor_attrs,
                          name=name, parent=parent, **kwargs)
 
+        self.data_is_time.put(data_is_time)
+
     def _get_wfrm(self):
         if self.ts_wfrm_n.get():
             return self.ts_wfrm.get(count=int(self.ts_wfrm_nord.get()))
