@@ -20,7 +20,8 @@ class AreaDetectorTimeseriesCollector(Device):
             read_attrs = []
 
         if configuration_attrs is None:
-            configuration_attrs = []
+            configuration_attrs = ['ts_control', 'ts_num_points',
+                                   'ts_cur_point', 'ts_wfrm_ts', 'num_points']
 
         super().__init__(prefix, read_attrs=read_attrs,
                          configuration_attrs=configuration_attrs,
@@ -83,7 +84,8 @@ class WaveformCollector(Device):
             read_attrs = []
 
         if configuration_attrs is None:
-            configuration_attrs = []
+            configuration_attrs = ['ts_sel', 'ts_rst', 'ts_wfrm_n',
+                                   'data_is_time']
 
         super().__init__(prefix, read_attrs=read_attrs,
                          configuration_attrs=configuration_attrs,
