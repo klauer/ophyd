@@ -1,0 +1,350 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ophyd.mca &mdash; ophyd  documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="ophyd  documentation" href="../../index.html"/>
+        <link rel="up" title="Module code" href="../index.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> ophyd
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.2.1+32.g3e78fad
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../device-overview.html">Overview of a Device</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../commands.html">Interactive Command Interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../builtin-devices.html">Ready-to-Use Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../positioners.html">Positioners</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../custom-devices.html">Custom Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../signals.html">Signals</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../area-detector.html">Area Detectors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../architecture.html">Project Architecture</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../../index.html">ophyd</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      
+    <li>ophyd.mca</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ophyd.mca</h1><div class="highlight"><pre>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+
+<span class="kn">from</span> <span class="nn">.signal</span> <span class="kn">import</span> <span class="p">(</span><span class="n">EpicsSignal</span><span class="p">,</span> <span class="n">EpicsSignalRO</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">.device</span> <span class="kn">import</span> <span class="n">Device</span>
+<span class="kn">from</span> <span class="nn">.device</span> <span class="kn">import</span> <span class="n">Component</span> <span class="k">as</span> <span class="n">C</span><span class="p">,</span> <span class="n">DynamicDeviceComponent</span> <span class="k">as</span> <span class="n">DDC</span>
+<span class="kn">from</span> <span class="nn">.areadetector</span> <span class="kn">import</span> <span class="n">EpicsSignalWithRBV</span> <span class="k">as</span> <span class="n">SignalWithRBV</span>
+
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">ROI</span><span class="p">(</span><span class="n">Device</span><span class="p">):</span>
+
+    <span class="c1"># &#39;name&#39; is not an allowed attribute</span>
+    <span class="n">label</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignal</span><span class="p">,</span> <span class="s1">&#39;NM&#39;</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignalRO</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">net_count</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignalRO</span><span class="p">,</span> <span class="s1">&#39;N&#39;</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">preset_count</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignal</span><span class="p">,</span> <span class="s1">&#39;P&#39;</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">is_preset</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignal</span><span class="p">,</span> <span class="s1">&#39;IP&#39;</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">bkgnd_chans</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignal</span><span class="p">,</span> <span class="s1">&#39;BG&#39;</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">hi_chan</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignal</span><span class="p">,</span> <span class="s1">&#39;HI&#39;</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">lo_chan</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignal</span><span class="p">,</span> <span class="s1">&#39;LO&#39;</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">read_attrs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">configuration_attrs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">monitor_attrs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">read_attrs</span><span class="o">=</span><span class="n">read_attrs</span><span class="p">,</span>
+                         <span class="n">configuration_attrs</span><span class="o">=</span><span class="n">configuration_attrs</span><span class="p">,</span>
+                         <span class="n">monitor_attrs</span><span class="o">=</span><span class="n">monitor_attrs</span><span class="p">,</span>
+                         <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">add_rois</span><span class="p">(</span><span class="n">range_</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Add one or more ROIs to an MCA instance</span>
+
+<span class="sd">       Parameters:</span>
+<span class="sd">       -----------</span>
+<span class="sd">       range_ : sequence of ints</span>
+<span class="sd">           Must be be in the set [0,31]</span>
+
+<span class="sd">       By default, an EpicsMCA is initialized with all 32 rois.</span>
+<span class="sd">       These provide the following Components as EpicsSignals (N=[0,31]):</span>
+<span class="sd">       EpicsMCA.rois.roiN.(label,count,net_count,preset_cnt, is_preset,</span>
+<span class="sd">       bkgnd_chans, hi_chan, lo_chan)</span>
+<span class="sd">       &#39;&#39;&#39;</span>
+    <span class="n">defn</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">roi</span> <span class="ow">in</span> <span class="n">range_</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">roi</span> <span class="o">&lt;</span> <span class="mi">32</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;roi must be in the set [0,31]&#39;</span><span class="p">)</span>
+
+        <span class="n">attr</span> <span class="o">=</span> <span class="s1">&#39;roi{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">roi</span><span class="p">)</span>
+        <span class="n">defn</span><span class="p">[</span><span class="n">attr</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">ROI</span><span class="p">,</span> <span class="s1">&#39;.R{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">roi</span><span class="p">),</span> <span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">defn</span>
+
+
+<div class="viewcode-block" id="EpicsMCARecord"><a class="viewcode-back" href="../../builtin-devices.html#ophyd.mca.EpicsMCARecord">[docs]</a><span class="k">class</span> <span class="nc">EpicsMCARecord</span><span class="p">(</span><span class="n">Device</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;SynApps MCA Record interface&#39;&#39;&#39;</span>
+    <span class="n">stop_signal</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignal</span><span class="p">,</span> <span class="s1">&#39;.STOP&#39;</span><span class="p">)</span>
+    <span class="n">preset_real_time</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignal</span><span class="p">,</span> <span class="s1">&#39;.PRTM&#39;</span><span class="p">)</span>
+    <span class="n">preset_live_time</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignal</span><span class="p">,</span> <span class="s1">&#39;.PLTM&#39;</span><span class="p">)</span>
+    <span class="n">elapsed_real_time</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignalRO</span><span class="p">,</span> <span class="s1">&#39;.ERTM&#39;</span><span class="p">)</span>
+    <span class="n">elapsed_live_time</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignalRO</span><span class="p">,</span> <span class="s1">&#39;.ELTM&#39;</span><span class="p">)</span>
+
+    <span class="n">spectrum</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignalRO</span><span class="p">,</span> <span class="s1">&#39;.VAL&#39;</span><span class="p">)</span>
+    <span class="n">background</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignalRO</span><span class="p">,</span> <span class="s1">&#39;.BG&#39;</span><span class="p">)</span>
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignal</span><span class="p">,</span> <span class="s1">&#39;.MODE&#39;</span><span class="p">,</span> <span class="n">string</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="n">rois</span> <span class="o">=</span> <span class="n">DDC</span><span class="p">(</span><span class="n">add_rois</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">32</span><span class="p">)))</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">read_attrs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">configuration_attrs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">monitor_attrs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">default_read_attrs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;spectrum&#39;</span><span class="p">,</span> <span class="s1">&#39;preset_real_time&#39;</span><span class="p">,</span>
+                              <span class="s1">&#39;elapsed_real_time&#39;</span><span class="p">]</span>
+        <span class="n">default_configuration_attrs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;preset_real_time&#39;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">read_attrs</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">read_attrs</span> <span class="o">=</span> <span class="n">default_read_attrs</span>
+
+        <span class="k">if</span> <span class="n">configuration_attrs</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">configuration_attrs</span> <span class="o">=</span> <span class="n">default_configuration_attrs</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">read_attrs</span><span class="o">=</span><span class="n">read_attrs</span><span class="p">,</span>
+                         <span class="n">configuration_attrs</span><span class="o">=</span><span class="n">configuration_attrs</span><span class="p">,</span>
+                         <span class="n">monitor_attrs</span><span class="o">=</span><span class="n">monitor_attrs</span><span class="p">,</span>
+                         <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># could arguably be made a configuration_attr instead...</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stage_sigs</span><span class="o">.</span><span class="n">update</span><span class="p">([(</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="s1">&#39;PHA&#39;</span><span class="p">)])</span>
+
+    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stop_signal</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">EpicsMCA</span><span class="p">(</span><span class="n">EpicsMCARecord</span><span class="p">):</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignal</span><span class="p">,</span> <span class="s1">&#39;Start&#39;</span><span class="p">)</span>
+    <span class="n">erase_start</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignal</span><span class="p">,</span> <span class="s1">&#39;EraseStart&#39;</span><span class="p">,</span> <span class="n">trigger_value</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="EpicsDXP"><a class="viewcode-back" href="../../builtin-devices.html#ophyd.mca.EpicsDXP">[docs]</a><span class="k">class</span> <span class="nc">EpicsDXP</span><span class="p">(</span><span class="n">Device</span><span class="p">):</span>
+    <span class="n">preset_mode</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignal</span><span class="p">,</span> <span class="s1">&#39;PresetMode&#39;</span><span class="p">,</span> <span class="n">string</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="c1"># NOTE: all SignalWithRBV are &quot;lazy=True&quot;</span>
+    <span class="c1"># Trigger Filter PVs</span>
+    <span class="n">trigger_peaking_time</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">SignalWithRBV</span><span class="p">,</span> <span class="s1">&#39;TriggerPeakingTime&#39;</span><span class="p">)</span>
+    <span class="n">trigger_threshold</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">SignalWithRBV</span><span class="p">,</span> <span class="s1">&#39;TriggerThreshold&#39;</span><span class="p">)</span>
+    <span class="n">trigger_gap_time</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">SignalWithRBV</span><span class="p">,</span> <span class="s1">&#39;TriggerGapTime&#39;</span><span class="p">)</span>
+
+    <span class="n">max_width</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">SignalWithRBV</span><span class="p">,</span> <span class="s1">&#39;MaxWidth&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Energy Filter PVs</span>
+    <span class="n">peaking_time</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">SignalWithRBV</span><span class="p">,</span> <span class="s1">&#39;PeakingTime&#39;</span><span class="p">)</span>
+    <span class="n">energy_threshold</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">SignalWithRBV</span><span class="p">,</span> <span class="s1">&#39;EnergyThreshold&#39;</span><span class="p">)</span>
+    <span class="n">gap_time</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">SignalWithRBV</span><span class="p">,</span> <span class="s1">&#39;GapTime&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Baseline PVs</span>
+    <span class="n">baseline_cut_percent</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">SignalWithRBV</span><span class="p">,</span> <span class="s1">&#39;BaselineCutPercent&#39;</span><span class="p">)</span>
+    <span class="n">baseline_cut_enable</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">SignalWithRBV</span><span class="p">,</span> <span class="s1">&#39;BaselineCutEnable&#39;</span><span class="p">)</span>
+    <span class="n">baseline_filter_length</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">SignalWithRBV</span><span class="p">,</span> <span class="s1">&#39;BaselineFilterLength&#39;</span><span class="p">)</span>
+    <span class="n">baseline_threshold</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">SignalWithRBV</span><span class="p">,</span> <span class="s1">&#39;BaselineThreshold&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Misc PVs</span>
+    <span class="n">preamp_gain</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">SignalWithRBV</span><span class="p">,</span> <span class="s1">&#39;PreampGain&#39;</span><span class="p">)</span>
+    <span class="n">detector_polarity</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">SignalWithRBV</span><span class="p">,</span> <span class="s1">&#39;DetectorPolarity&#39;</span><span class="p">)</span>
+    <span class="n">reset_delay</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">SignalWithRBV</span><span class="p">,</span> <span class="s1">&#39;ResetDelay&#39;</span><span class="p">)</span>
+    <span class="n">decay_time</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">SignalWithRBV</span><span class="p">,</span> <span class="s1">&#39;DecayTime&#39;</span><span class="p">)</span>
+    <span class="n">max_energy</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">SignalWithRBV</span><span class="p">,</span> <span class="s1">&#39;MaxEnergy&#39;</span><span class="p">)</span>
+    <span class="n">adc_percent_rule</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">SignalWithRBV</span><span class="p">,</span> <span class="s1">&#39;ADCPercentRule&#39;</span><span class="p">)</span>
+
+    <span class="c1"># read-only diagnostics</span>
+    <span class="n">triggers</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignalRO</span><span class="p">,</span> <span class="s1">&#39;Triggers&#39;</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">events</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignalRO</span><span class="p">,</span> <span class="s1">&#39;Events&#39;</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">overflows</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignalRO</span><span class="p">,</span> <span class="s1">&#39;Overflows&#39;</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">underflows</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignalRO</span><span class="p">,</span> <span class="s1">&#39;Underflows&#39;</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">input_count_rate</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignalRO</span><span class="p">,</span> <span class="s1">&#39;InputCountRate&#39;</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">output_count_rate</span> <span class="o">=</span> <span class="n">C</span><span class="p">(</span><span class="n">EpicsSignalRO</span><span class="p">,</span> <span class="s1">&#39;OutputCountRate&#39;</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">read_attrs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">configuration_attrs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">monitor_attrs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">read_attrs</span><span class="o">=</span><span class="n">read_attrs</span><span class="p">,</span>
+                         <span class="n">configuration_attrs</span><span class="o">=</span><span class="n">configuration_attrs</span><span class="p">,</span>
+                         <span class="n">monitor_attrs</span><span class="o">=</span><span class="n">monitor_attrs</span><span class="p">,</span>
+                         <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014, Brookhaven National Lab.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

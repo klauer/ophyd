@@ -1,0 +1,24 @@
+<map id="inheritance6bfe1c8113" name="inheritance6bfe1c8113">
+<area shape="rect" id="node1" title="The AreaDetector base class" alt="" coords="316,105,377,117"/>
+<area shape="rect" id="node4" title="The base class for the hardware&#45;specific classes that follow." alt="" coords="436,120,537,132"/>
+<area shape="rect" id="node15" href="area-detector.html#ophyd.areadetector.plugins.PluginBase" target="_top" title="AreaDetector plugin base class" alt="" coords="445,101,528,113"/>
+<area shape="rect" id="node2" title="Base class for device objects" alt="" coords="185,68,248,80"/>
+<area shape="rect" id="node10" href="builtin-devices.html#ophyd.epics_motor.EpicsMotor" target="_top" title="An EPICS motor record, wrapped in a :class:`Positioner`" alt="" coords="295,30,398,42"/>
+<area shape="rect" id="node13" href="builtin-devices.html#ophyd.mca.EpicsMCARecord" target="_top" title="SynApps MCA Record interface" alt="" coords="298,86,395,99"/>
+<area shape="rect" id="node17" href="positioners.html#ophyd.pv_positioner.PVPositioner" target="_top" title="A Positioner which is controlled using multiple user&#45;defined signals" alt="" coords="289,49,404,61"/>
+<area shape="rect" id="node18" href="builtin-devices.html#ophyd.scaler.EpicsScaler" target="_top" title="SynApps Scaler Record interface" alt="" coords="307,68,387,80"/>
+<area shape="rect" id="node5" title="Classes that inherit from this can safely customize the" alt="" coords="23,86,125,99"/>
+<area shape="rect" id="node24" title="Base class for trigger mixin classes" alt="" coords="160,105,274,117"/>
+<area shape="rect" id="node6" title="A descriptor representing a device component (or signal)" alt="" coords="33,20,115,32"/>
+<area shape="rect" id="node7" title="The base class for all objects in Ophyd" alt="" coords="25,39,123,51"/>
+<area shape="rect" id="node11" href="positioners.html#ophyd.positioner.PositionerBase" target="_top" title="The positioner base class" alt="" coords="163,39,271,51"/>
+<area shape="rect" id="node21" href="signals.html#ophyd.signal.Signal" target="_top" title="A signal, which can have a read&#45;write or read&#45;only value." alt="" coords="188,16,245,28"/>
+<area shape="rect" id="node8" title="An Device component that dynamically creates a OphyDevice" alt="" coords="2,2,146,14"/>
+<area shape="rect" id="node9" title="Classes that inherit from this can safely customize the" alt="" coords="419,39,554,51"/>
+<area shape="rect" id="node14" href="area-detector.html#ophyd.areadetector.plugins.FilePlugin" target="_top" title="plugins.FilePlugin" alt="" coords="579,68,656,80"/>
+<area shape="rect" id="node16" href="area-detector.html#ophyd.areadetector.plugins.HDF5Plugin" target="_top" title="plugins.HDF5Plugin" alt="" coords="680,68,766,80"/>
+<area shape="rect" id="node19" href="signals.html#ophyd.signal.EpicsSignal" target="_top" title="An EPICS signal, comprised of either one or two EPICS PVs" alt="" coords="447,11,526,23"/>
+<area shape="rect" id="node20" href="signals.html#ophyd.signal.EpicsSignalBase" target="_top" title="A read&#45;only EpicsSignal &#45;&#45; that is, one with no `write_pv`" alt="" coords="296,11,397,23"/>
+<area shape="rect" id="node22" href="signals.html#ophyd.signal.EpicsSignalRO" target="_top" title="A read&#45;only EpicsSignal &#45;&#45; that is, one with no `write_pv`" alt="" coords="440,58,533,70"/>
+<area shape="rect" id="node23" title="This trigger mixin class takes one acquisition per trigger." alt="" coords="287,124,406,136"/>
+</map>
