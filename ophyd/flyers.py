@@ -97,14 +97,14 @@ class WaveformCollector(Device):
     def collect(self):
         self.stop()
         payload = self._get_waveform()
-        if len(payload) == 0:
-            return
-        for i, v in enumerate(payload):
-            x = v if self.data_is_time.get() else i
-            ev = {'data': {self.name: x},
-                  'timestamps': {self.name: v},
-                  'time': v}
-            yield ev
+        if payload:
+            data_is_time = self.data_is_time.get()
+            for i, v in enumerate(payload):
+                x = v if data_is_time else i
+                ev = {'data': {self.name: x},
+                      'timestamps': {self.name: v},
+                      'time': v}
+                yield ev
 
     def stop(self):
         self.select.put(0, wait=True)  # Stop Collection
