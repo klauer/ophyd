@@ -54,7 +54,7 @@ class AreaDetectorTimeseriesCollector(Device):
         for v, t in zip(payload_val, payload_time):
             yield {'data': {self.name: v},
                    'timestamps': {self.name: t},
-                   'time': ttime.time()}
+                   'time': t}
 
     def stop(self):
         self.ts_control.put(2, wait=True)  # Stop Collection
