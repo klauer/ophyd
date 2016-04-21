@@ -17,8 +17,7 @@ class AreaDetectorTimeseriesCollector(Device):
             read_attrs = []
 
         if configuration_attrs is None:
-            configuration_attrs = ['control', 'num_points',
-                                   'cur_point', 'waveform_ts']
+            configuration_attrs = ['num_points']
 
         super().__init__(prefix, read_attrs=read_attrs,
                          configuration_attrs=configuration_attrs,
@@ -52,11 +51,6 @@ class AreaDetectorTimeseriesCollector(Device):
     def stop(self):
         self.control.put(2, wait=True)  # Stop Collection
 
-    def describe(self):
-        return [{self.name: {'source': 'PV:{}'.format(self.prefix),
-                             'dtype': 'number',
-                             'shape': None}}, ]
-
 
 class WaveformCollector(Device):
     select = C(EpicsSignal, "Sw-Sel")
@@ -73,8 +67,7 @@ class WaveformCollector(Device):
             read_attrs = []
 
         if configuration_attrs is None:
-            configuration_attrs = ['select', 'reset', 'waveform_count',
-                                   'data_is_time']
+            configuration_attrs = ['data_is_time']
 
         super().__init__(prefix, read_attrs=read_attrs,
                          configuration_attrs=configuration_attrs,
@@ -115,11 +108,6 @@ class WaveformCollector(Device):
 
     def stop(self):
         self.select.put(0, wait=True)  # Stop Collection
-
-    def describe(self):
-        return [{self.name: {'source': 'PV:{}'.format(self.prefix),
-                             'dtype': 'number',
-                             'shape': None}}, ]
 
     def _repr_info(self):
         yield from super()._repr_info()
