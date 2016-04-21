@@ -1,8 +1,9 @@
 import time
 import pytest
 
-from ophyd import (Device, Component as Cpt,
-                   SimDetector)
+from ophyd import (Component as Cpt,
+                   SimDetector, SimDetectorCam, StatsPlugin, EpicsSignal)
+from ophyd.areadetector.base import EpicsSignalWithRBV
 from ophyd.flyers import (AreaDetectorTimeseriesCollector,
                           WaveformCollector)
 from ophyd.status import wait
@@ -20,20 +21,19 @@ def prefix():
                         # 'Stats5:',
                         ]
                 )
-def suffix(request):
+def stats_suffix(request):
     return request.param
 
 
-def full_prefix(prefix, suffix):
-    return ''.join((prefix, suffix))
-
-
 @pytest.fixture(scope='function')
-def ts_sim_detector(prefix, suffix):
+def ts_sim_detector(prefix, stats_suffix):
     class Detector(SimDetector):
-        ts_col = Cpt(AreaDetectorTimeseriesCollector, suffix)
+        acquire = Cpt(EpicsSignalWithRBV, 'cam1:Acquire', trigger_value=1)
+        cam = Cpt(SimDetectorCam, 'cam1:')
+        ts_col = Cpt(AreaDetectorTimeseriesCollector, stats_suffix)
+        stats = Cpt(StatsPlugin, stats_suffix)
 
-    det = Detector(prefix)
+    det = Detector(prefix, name='sim')
     try:
         det.wait_for_connection(timeout=1.0)
     except TimeoutError:
@@ -51,12 +51,21 @@ def test_ad_time_series(ts_sim_detector, tscollector):
 
     num_points = 3
 
-    print(tscollector.describe())
-    print(repr(tscollector))
-    print(tscollector.stage_sigs)
-    tscollector.stop()
+    cam = sim_detector.cam
+    cam.stage_sigs[cam.acquire_time] = 0.001
+    cam.stage_sigs[cam.acquire_period] = 0.001
+    cam.stage_sigs[cam.image_mode] = 'Single'
+    cam.stage_sigs[cam.trigger_mode] = 'Internal'
 
-    tscollector.num_points.put(num_points, wait=True)
+    print('tscollector desc', tscollector.describe())
+    print('tscollector repr', repr(tscollector))
+    print('simdet stage sigs', sim_detector.stage_sigs)
+    print('tscoll stage sigs', tscollector.stage_sigs)
+    print('cam stage sigs', cam.stage_sigs)
+    print('stats stage sigs', sim_detector.stats.stage_sigs)
+
+    tscollector.stop()
+    tscollector.stage_sigs[tscollector.num_points] = num_points
 
     sim_detector.stage()
     tscollector.kickoff()
@@ -64,12 +73,14 @@ def test_ad_time_series(ts_sim_detector, tscollector):
     for i in range(num_points):
         st = sim_detector.trigger()
         wait(st)
+        print(st)
         time.sleep(0.1)
 
     collected = list(tscollector.collect())
     print('collected', collected)
     sim_detector.unstage()
-    raise ValueError('')
+    assert len(collected) == num_points
+    # TODO any more validation here?
 
 
 @pytest.fixture(scope='function')
