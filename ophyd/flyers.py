@@ -13,9 +13,9 @@ class AreaDetectorTimeseriesCollector(Device):
     ts_wfrm_ts = C(EpicsSignalRO, "TSTimestamp", auto_monitor=False)
     num_points = C(Signal)
 
-    def __init__(self, prefix, *, read_attrs=None, configuration_attrs=None,
-                 monitor_attrs=None, name=None, parent=None,
-                 num_points=1000000, **kwargs):
+    def __init__(self, prefix, *, read_attrs=None,
+                 configuration_attrs=None, name=None,
+                 parent=None, num_points=1000000, **kwargs):
         if read_attrs is None:
             read_attrs = []
 
@@ -25,7 +25,6 @@ class AreaDetectorTimeseriesCollector(Device):
 
         super().__init__(prefix, read_attrs=read_attrs,
                          configuration_attrs=configuration_attrs,
-                         monitor_attrs=monitor_attrs,
                          name=name, parent=parent, **kwargs)
 
         self.num_points.put(num_points)
@@ -77,9 +76,9 @@ class WaveformCollector(Device):
     ts_wfrm_nord = C(EpicsSignalRO, "Val:Time-Wfrm.NORD", auto_monitor=False)
     data_is_time = C(Signal)
 
-    def __init__(self, prefix, *, read_attrs=None, configuration_attrs=None,
-                 monitor_attrs=None, name=None, parent=None,
-                 data_is_time=True, **kwargs):
+    def __init__(self, prefix, *, read_attrs=None,
+                 configuration_attrs=None, name=None,
+                 parent=None, data_is_time=True, **kwargs):
         if read_attrs is None:
             read_attrs = []
 
@@ -89,7 +88,6 @@ class WaveformCollector(Device):
 
         super().__init__(prefix, read_attrs=read_attrs,
                          configuration_attrs=configuration_attrs,
-                         monitor_attrs=monitor_attrs,
                          name=name, parent=parent, **kwargs)
 
         self.data_is_time.put(data_is_time)
