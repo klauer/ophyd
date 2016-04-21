@@ -1,7 +1,5 @@
-import time as ttime
-
 from .signal import (Signal, EpicsSignal, EpicsSignalRO)
-from .ophydobj import DeviceStatus
+from .status import DeviceStatus
 from .device import (Device, Component as C)
 
 
@@ -29,7 +27,7 @@ class AreaDetectorTimeseriesCollector(Device):
 
         self.num_points.put(num_points)
 
-    def _get_wfrms(self):
+    def _get_waveforms(self):
         n = self.ts_cur_point.get()
         if n:
             return (self.ts_wfrm.get(count=n),
@@ -42,14 +40,14 @@ class AreaDetectorTimeseriesCollector(Device):
         # Erase buffer and start collection
         self.ts_control.put(0, wait=True)
         # make status object
-        status = DeviceStatus()
+        status = DeviceStatus(self)
         # it always done, the scan should never even try to wait for this
         status._finished()
         return status
 
     def collect(self):
         self.stop()
-        payload_val, payload_time = self._get_wfrm()
+        payload_val, payload_time = self._get_waveforms()
         for v, t in zip(payload_val, payload_time):
             yield {'data': {self.name: v},
                    'timestamps': {self.name: t},
@@ -92,7 +90,7 @@ class WaveformCollector(Device):
 
         self.data_is_time.put(data_is_time)
 
-    def _get_wfrm(self):
+    def _get_waveform(self):
         if self.ts_wfrm_n.get():
             return self.ts_wfrm.get(count=int(self.ts_wfrm_nord.get()))
         else:
@@ -106,14 +104,14 @@ class WaveformCollector(Device):
         # Start Buffer
         self.ts_sel.put(1, wait=True)
         # make status object
-        status = DeviceStatus()
+        status = DeviceStatus(self)
         # it always done, the scan should never even try to wait for this
         status._finished()
         return status
 
     def collect(self):
         self.stop()
-        payload = self._get_wfrm()
+        payload = self._get_waveform()
         if len(payload) == 0:
             return
         for i, v in enumerate(payload):
