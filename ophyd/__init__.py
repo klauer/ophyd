@@ -7,22 +7,16 @@ logger.addHandler(logging.NullHandler())
 
 cl = None
 
+known_layers = ('pyepics', 'caproto', 'dummy')
 
-def set_cl(control_layer=None, *, pv_telemetry=False):
-    global cl
-    known_layers = ('pyepics', 'caproto', 'dummy')
 
-    if control_layer is None:
-        control_layer = os.environ.get('OPHYD_CONTROL_LAYER', 'any').lower()
-
+def load_cl(control_layer, pv_telemetry):
     if control_layer == 'any':
         for c_type in known_layers:
             try:
-                set_cl(c_type)
+                return load_cl(c_type, pv_telemetry)
             except ImportError:
                 continue
-            else:
-                return
         else:
             raise ImportError('no valid control layer found')
 
@@ -39,9 +33,9 @@ def set_cl(control_layer=None, *, pv_telemetry=False):
 
     exports = ('setup', 'caput', 'caget', 'get_pv', 'pv_form', 'thread_class')
     # this sets the module level value
-    cl = types.SimpleNamespace(**{k: getattr(shim, k)
+    _cl = types.SimpleNamespace(**{k: getattr(shim, k)
                                   for k in exports})
-    cl.setup(logger)
+    _cl.setup(logger)
     if pv_telemetry:
         from functools import wraps
         from collections import Counter
@@ -56,7 +50,17 @@ def set_cl(control_layer=None, *, pv_telemetry=False):
             get_pv.counter = c
             return get_pv
 
-        cl.get_pv = decorate_get_pv(cl.get_pv)
+        _cl.get_pv = decorate_get_pv(cl.get_pv)
+
+    return _cl
+
+def set_cl(control_layer=None, *, pv_telemetry=False):
+    global cl
+
+    if control_layer is None:
+        control_layer = os.environ.get('OPHYD_CONTROL_LAYER', 'any').lower()
+
+    cl = load_cl(control_layer, pv_telemetry)
 
 
 def get_cl():
