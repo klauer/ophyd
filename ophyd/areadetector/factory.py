@@ -1,4 +1,5 @@
-from .. import Component as Cpt
+from ..Device import create_device_from_components
+from .. import (Component as Cpt, underscores_to_camel_case)
 from . import (SingleTrigger, ImagePlugin, StatsPlugin, TransformPlugin,
                ROIPlugin, ProcessPlugin, HDF5Plugin, TIFFPlugin)
 from .filestore_mixins import (FileStoreTIFFIterativeWrite,
@@ -12,8 +13,10 @@ class HDF5PluginWithFileStore(HDF5Plugin, FileStoreHDF5IterativeWrite):
     ...
 
 
-def assemble_AD(hardware, pv, name, *,
-                write_path_template, root, fs, read_path_template=None):
+def assemble_AD(hardware, prefix, name, *,
+                write_path_template, root, fs, read_path_template=None,
+                num_rois=4, num_stats=5, num_transform=1, num_image=1,
+                num_process=1, enable_all=False):
     """
     Assemble AreaDetector components with commonly useful defaults.
 
@@ -21,7 +24,7 @@ def assemble_AD(hardware, pv, name, *,
     ----------
     hardware : class
         e.g., ``SimDetector``
-    pv : string
+    prefix : string
     name : string
     fs : FileStore
     write_path_template : string
@@ -33,6 +36,18 @@ def assemble_AD(hardware, pv, name, *,
     read_path_template : string, optional
         Use this if the path where the files will be read is different than the
         path where they are written, due to different mounts. None by default.
+    num_rois : int or range, optional
+        Number of ROI plugins
+    num_stats : int or range, optional
+        Number of Stats plugins
+    num_transform : int or range, optional
+        Number of transform plugins
+    num_image : int or range, optional
+        Number of image plugins
+    num_process : int or range, optional
+        Number of process plugins
+    enable_all : bool, optional
+        Enable all plugins when stage is called
 
     Returns
     -------
@@ -40,45 +55,50 @@ def assemble_AD(hardware, pv, name, *,
         instance of a custom-built class pre-configured with commonly useful
         defaults
     """
-    plugins = dict(
-        hdf5 = Cpt(HDF5PluginWithFileStore,
-                   suffix='HDF1:',
-                   write_path_template=write_path_template,
-                   root=root,
-                   fs=fs),
+    components = dict(
+        hdf5=Cpt(HDF5PluginWithFileStore,
+                 suffix='HDF1:',
+                 write_path_template=write_path_template,
+                 root=root,
+                 fs=fs),
 
-        image = Cpt(ImagePlugin, 'image1:'),
-
-        proc1 = Cpt(ProcessPlugin, 'Proc1:'),
-
-        roi1 = Cpt(ROIPlugin, 'ROI1:'),
-        roi2 = Cpt(ROIPlugin, 'ROI2:'),
-        roi3 = Cpt(ROIPlugin, 'ROI3:'),
-        roi4 = Cpt(ROIPlugin, 'ROI4:'),
-
-        stats1 = Cpt(StatsPlugin, 'Stats1:'),
-        stats2 = Cpt(StatsPlugin, 'Stats2:'),
-        stats3 = Cpt(StatsPlugin, 'Stats3:'),
-        stats4 = Cpt(StatsPlugin, 'Stats4:'),
-        stats5 = Cpt(StatsPlugin, 'Stats5:'),
-
-        tiff = Cpt(TIFFPluginWithFileStore,
-                   suffix='TIFF:',
-                   write_path_template=write_path_template,
-                   root=root,
-                   fs=fs),
-
-        trans1 = Cpt(TransformPlugin, 'Trans1:'),
+        tiff=Cpt(TIFFPluginWithFileStore,
+                 suffix='TIFF1:',
+                 write_path_template=write_path_template,
+                 root=root,
+                 fs=fs),
     )
-    cls = type('FactoryBuiltDetector', (SingleTrigger, hardware), plugins)
-    instance = cls(pv, name=name)
-    instance.read_attrs = ['hdf5']
+
+    numbered_items = [
+        (num_rois, 'roi{}', ROIPlugin, 'ROI{}:'),
+        (num_stats, 'stats{}', StatsPlugin, 'Stats{}:'),
+        (num_image, 'image{}', ImagePlugin, 'image{}:'),
+        (num_transform, 'trans{}', TransformPlugin, 'Trans{}:'),
+        (num_process, 'proc{}', ProcessPlugin, 'Proc{}:'),
+    ]
+
+    for count, attr, plugin_class, plugin_suffix in numbered_items:
+        indices = (range(1, count) if isinstance(count, int)
+                   else count)
+
+        for idx in indices:
+            components[attr.format(idx)] = Cpt(plugin_class, plugin_suffix.format(idx))
+
+    cls = create_device_from_components(
+        name=underscores_to_camel_case(name) + 'Device',
+        docstring=f'Factory-generated AreaDetector {name}',
+        base_class=(SingleTrigger, hardware),
+        default_read_attrs=['hdf5', ],
+    )
+
+    instance = cls(prefix, name=name)
 
     # Do not enable the plugins when staged.
     # Users can reinstate auto-enabling easily by calling, for example,
     # `instance.hdf5.ensure_enabled()`.
-    for attr in plugins:
-        getattr(instance, attr).stage_sigs.pop('enabled')
-    instance.read_attrs = ['hdf5']
+    for attr in components:
+        stage_sigs = getattr(instance, attr).stage_sigs
+        stage_sigs.pop('enabled', None)
+
     # TODO add stats totals
     instance.hdf5.read_attrs = []
