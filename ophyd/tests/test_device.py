@@ -587,6 +587,14 @@ def test_walk_subdevice_classes():
     ]
 
 
+def test_component_properties():
+    assert Component(FakeSignal).is_signal
+    assert not Component(FakeSignal).is_device
+
+    assert Component(Device).is_device
+    assert not Component(Device).is_signal
+
+
 def test_walk_subdevices():
     class SubSubDevice(Device):
         cpt4 = Component(FakeSignal, '4')
