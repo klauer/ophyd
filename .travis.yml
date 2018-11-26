@@ -71,6 +71,9 @@ install:
   - python -mpip install -Ur test-requirements.txt
   - python -mpip install -e .
 
+  # TEMPORARY pyepics upgrade
+  - python -mpip install -U git+https://github.com/klauer/pyepics.git@enh_update_metadata
+
   - echo "PATH=$PATH"
   - echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
 
