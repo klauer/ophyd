@@ -61,8 +61,9 @@ def test_data_type():
     assert utils.data_type(2.718) == 'number'
     assert utils.data_type('foo') == 'string'
     assert utils.data_type(np.array([1, 2, 3])) == 'array'
-    with pytest.raises(ValueError):
-        utils.data_type([1, 2, 3])
+    assert utils.data_type([1, 2, 3]) == 'array'
+    assert utils.data_type((1, 2, 3)) == 'array'
+
     with pytest.raises(ValueError):
         utils.data_type(dict())
 
@@ -74,9 +75,7 @@ def test_data_shape():
     assert utils.data_shape('foo') == list()
     assert utils.data_shape(np.array([1, 2, 3])) == [3, ]
     assert utils.data_shape(np.array([[1, 2], [3, 4]])) == [2, 2]
-
-    with pytest.raises(ValueError):
-        utils.data_shape([])
+    assert utils.data_shape([]) == [0]
 
 
 def assert_OD_equal_ignore_ts(a, b):
