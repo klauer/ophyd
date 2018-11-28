@@ -242,6 +242,8 @@ def _check_pyepics_version(version):
     except Exception:
         version = None
 
+    return
+
     if version is None:
         warnings.warn('Unrecognized PyEpics version; assuming it is '
                       'compatible', ImportWarning)

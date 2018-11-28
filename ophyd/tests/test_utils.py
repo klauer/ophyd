@@ -31,6 +31,7 @@ def test_waveform_to_string():
     assert epics_utils.waveform_to_string(asc) == s
 
 
+@pytest.mark.skip('(TEMPORARY until pyepics release)')
 def test_pyepics_version_support():
     from ophyd import get_cl
     shim = pytest.importorskip('ophyd._pyepics_shim')
