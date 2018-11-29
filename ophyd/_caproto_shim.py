@@ -61,8 +61,11 @@ class PV(_PV):
         return md
 
     def get_with_metadata(self, count=None, as_string=False, as_numpy=True,
-                          timeout=None, with_ctrlvars=False, use_monitor=True):
+                          timeout=None, with_ctrlvars=False, use_monitor=True,
+                          form=None):
         # TODO: this should be supported in caproto
+        if form not in ('time', None):
+            raise NotImplementedError('TODO')
         value = super().get(count=count, as_string=as_string,
                             as_numpy=as_numpy, timeout=timeout,
                             with_ctrlvars=with_ctrlvars,
@@ -75,6 +78,11 @@ class PV(_PV):
                 'severity': self._args['severity'],
                 'timestamp': self._args['timestamp'],
                 }
+
+    def clear_callbacks(self):
+        super().clear_callbacks()
+        self.access_callbacks.clear()
+        self.connection_callbacks.clear()
 
     def clear_auto_monitor(self):
         # TODO move into caproto
