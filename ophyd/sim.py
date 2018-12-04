@@ -99,6 +99,9 @@ class SynSignal(Signal):
         self.loop = loop
         super().__init__(value=self._func(), timestamp=ttime.time(), name=name,
                          parent=parent, labels=labels, kind=kind, **kwargs)
+        self._metadata.update(
+            connected=True,
+        )
 
     def describe(self):
         res = super().describe()
@@ -138,6 +141,13 @@ class SynSignal(Signal):
 
 
 class SignalRO(Signal):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._metadata.update(
+            connected=True,
+            write_access=False,
+        )
+
     def put(self, value, *, timestamp=None, force=False):
         raise ReadOnlyError("The signal {} is readonly.".format(self.name))
 
@@ -1041,6 +1051,9 @@ class FakeEpicsSignal(SynSignal):
         self._use_limits = limits
         self._put_func = None
         self._limits = None
+        self._metadata.update(
+            connected=True,
+        )
 
     def sim_set_func(self, func):
         """
@@ -1093,7 +1106,11 @@ class FakeEpicsSignal(SynSignal):
         Implement here instead of FakeEpicsSignalRO so you can call it with
         every fake signal.
         """
-        return Signal.put(self, *args, **kwargs)
+        force = kwargs.pop('force', True)
+        ret = Signal.put(self, *args, force=force, **kwargs)
+        # Ensure that some metadata is reported
+        self._run_subs(sub_type=self.SUB_META, **self._metadata)
+        return ret
 
     @property
     def enum_strs(self):
@@ -1115,6 +1132,8 @@ class FakeEpicsSignal(SynSignal):
             enums will be 0, the next will be 1, etc.
         """
         self._enum_strs = enums
+        self._metadata['enum_strs'] = tuple(enums)
+        self._run_subs(sub_type=self.SUB_META, **self._metadata)
 
     @property
     def limits(self):
