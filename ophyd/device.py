@@ -756,7 +756,7 @@ class Device(BlueskyInterface, OphydObject):
              if not cpt.lazy or cpt._subscriptions]
 
     @classmethod
-    def _initialize_device(cls):
+    def _initialize_device(cls, *, version=None, depends=None):
         '''Initializes the Device and all of its Components
 
         Initializes the following attributes from the Components::
@@ -768,6 +768,11 @@ class Device(BlueskyInterface, OphydObject):
             - _required_for_connection - a dictionary of object-to-description
               for additional things that block this from being reported as
               connected
+
+        Parameters
+        ----------
+        version :
+        depends :
         '''
 
         for attr in DEVICE_INSTANCE_ATTRS:
@@ -828,10 +833,53 @@ class Device(BlueskyInterface, OphydObject):
             if getattr(obj, '_required_for_connection', False)
         )
 
-    def __init_subclass__(cls, **kwargs):
+        all_versions = {
+            base_device._device_implements_: base_device
+            for base_device in base_devices
+            if base_device._device_implements_ is not None
+        }
+
+        all_depends = [
+            base_device._device_depends_
+            for base_device in base_devices
+            if base_device._device_depends_ is not None
+        ]
+
+        if depends is not None:
+            all_depends.append(depends)
+
+        depends = {}
+        for base_dep in all_depends:
+            depends.update(base_dep)
+
+        if version is not None:
+            if version in all_versions:
+                raise ValueError(
+                    f'Version {version!r} has already been specified by class '
+                    f'{all_versions[version]}.')
+            cls._device_implements_ = version
+            all_versions[version] = cls
+        else:
+            cls._device_implements_ = None
+            if all_versions:
+                # TODO: bad scenarios here?
+                version = max(all_versions)
+
+        cls._device_version_ = version
+        cls._device_depends_ = depends
+        for cls_ in list(all_versions.values()) + [cls]:
+            cls_._device_versions_ = all_versions
+
+        if depends is not None:
+            for attr, cpt in cls._sig_attrs.items():
+                if cpt.cls in depends:
+                    required_version = depends[cpt.cls]
+                    cpt.cls = cpt.cls._device_versions_[required_version]
+
+    def __init_subclass__(cls, version=None, depends=None):
         'This is called automatically in Python for all subclasses of Device'
-        super().__init_subclass__(**kwargs)
-        cls._initialize_device(**kwargs)
+        super().__init_subclass__()
+        cls._initialize_device(version=version, depends=depends)
 
     @classmethod
     def walk_components(cls):
