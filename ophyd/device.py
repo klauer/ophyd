@@ -756,7 +756,7 @@ class Device(BlueskyInterface, OphydObject):
              if not cpt.lazy or cpt._subscriptions]
 
     @classmethod
-    def _initialize_device(cls):
+    def _initialize_device(cls, *, version=None, depends=None):
         '''Initializes the Device and all of its Components
 
         Initializes the following attributes from the Components::
@@ -768,6 +768,11 @@ class Device(BlueskyInterface, OphydObject):
             - _required_for_connection - a dictionary of object-to-description
               for additional things that block this from being reported as
               connected
+
+        Parameters
+        ----------
+        version :
+        depends :
         '''
 
         for attr in DEVICE_INSTANCE_ATTRS:
@@ -831,7 +836,7 @@ class Device(BlueskyInterface, OphydObject):
     def __init_subclass__(cls, **kwargs):
         'This is called automatically in Python for all subclasses of Device'
         super().__init_subclass__(**kwargs)
-        cls._initialize_device(**kwargs)
+        cls._initialize_device()
 
     @classmethod
     def walk_components(cls):
