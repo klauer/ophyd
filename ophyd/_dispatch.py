@@ -1,7 +1,9 @@
-import time
 import functools
+import io
 import queue
 import threading
+import time
+import traceback
 
 
 class _CallbackThread(threading.Thread):
@@ -38,7 +40,12 @@ class _CallbackThread(threading.Thread):
                 ...
             else:
                 try:
-                    self.current_callback = (callback.__name__, kwargs.get('pvname'))
+                    f = io.StringIO()
+                    traceback.print_stack(file=f)
+                    stack = f.getvalue()
+
+                    self.current_callback = (callback.__name__,
+                                             kwargs.get('pvname'), stack)
                     callback(*args, **kwargs)
                 except Exception as ex:
                     self.logger.exception(
@@ -99,7 +106,7 @@ class DispatcherThreadContext:
 
 class EventDispatcher:
     def __init__(self, *, context, logger, timeout=0.1,
-                 thread_class=_CallbackThread, debug_monitor=False,
+                 thread_class=_CallbackThread, debug_monitor=True,
                  utility_threads=4):
         self._threads = {}
         self._thread_contexts = {}
@@ -133,12 +140,18 @@ class EventDispatcher:
                            for name, thread in sorted(self._threads.items())
                            ]
             status = [
-                '{name}={qsize} ({cb})'.format(name=name, qsize=qsize, cb=cb)
+                ('{name}={qsize}'.format(name=name, qsize=qsize), cb or [None, None, None])
                 for name, qsize, cb in queue_sizes
                 if qsize > 0
             ]
-            if status:
-                print('Dispatcher debug:', ' / '.join(status))
+            for header, (cb, pvname, stack) in status:
+                if cb:
+                    print('Dispatcher debug:', header, cb, pvname)
+                    print('-----------------')
+                    for line in stack.splitlines():
+                        print(header, line)
+                    print('-----------------')
+
             time.sleep(interval)
 
     def __repr__(self):

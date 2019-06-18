@@ -71,6 +71,9 @@ class PV(_PV):
 
     def get_all_metadata_callback(self, callback, *, timeout):
         def get_metadata_thread(pvname):
+            if not self.connected:
+                return
+
             md = self.get_all_metadata_blocking(timeout=timeout)
             callback(pvname, md)
 

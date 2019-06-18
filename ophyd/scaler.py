@@ -10,6 +10,9 @@ from .device import (Component as C, DynamicDeviceComponent as DDC,
 
 logger = logging.getLogger(__name__)
 
+SCALER_NUM_CHANS = 33
+SCALER_CHANNELS = range(1, SCALER_NUM_CHANS)
+
 
 def _scaler_fields(cls, attr_base, field_base, range_, **kwargs):
     defn = OrderedDict()
@@ -32,9 +35,9 @@ class EpicsScaler(Device):
     auto_count_delay = C(EpicsSignal, '.DLY1', kind=Kind.config)
 
     # the data
-    channels = DDC(_scaler_fields(EpicsSignalRO, 'chan', '.S', range(1, 33),
+    channels = DDC(_scaler_fields(EpicsSignalRO, 'chan', '.S', SCALER_CHANNELS,
                                   kind=Kind.hinted))
-    names = DDC(_scaler_fields(EpicsSignal, 'name', '.NM', range(1, 33),
+    names = DDC(_scaler_fields(EpicsSignal, 'name', '.NM', SCALER_CHANNELS,
                                kind=Kind.config))
 
     time = C(EpicsSignal, '.T', kind=Kind.config)
@@ -43,9 +46,9 @@ class EpicsScaler(Device):
     preset_time = C(EpicsSignal, '.TP', kind=Kind.config)
     auto_count_time = C(EpicsSignal, '.TP1', kind=Kind.config)
 
-    presets = DDC(_scaler_fields(EpicsSignal, 'preset', '.PR', range(1, 33),
+    presets = DDC(_scaler_fields(EpicsSignal, 'preset', '.PR', SCALER_CHANNELS,
                                  kind=Kind.omitted))
-    gates = DDC(_scaler_fields(EpicsSignal, 'gate', '.G', range(1, 33),
+    gates = DDC(_scaler_fields(EpicsSignal, 'gate', '.G', SCALER_CHANNELS,
                                kind=Kind.omitted))
 
     update_rate = C(EpicsSignal, '.RATE', kind=Kind.config)
@@ -95,7 +98,7 @@ def _sc_chans(attr_fix, id_range):
 class ScalerCH(Device):
 
     # The data
-    channels = DDC(_sc_chans('chan', range(1, 33)))
+    channels = DDC(_sc_chans('chan', SCALER_CHANNELS))
 
     # tigger + trigger mode
     count = C(EpicsSignal, '.CNT', trigger_value=1, kind=Kind.omitted)
