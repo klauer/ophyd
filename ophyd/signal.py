@@ -652,19 +652,23 @@ class EpicsSignalBase(Signal):
             return
 
         was_connected = self.connected
+        newly_connected = not was_connected and conn
+        newly_disconnected = was_connected and not conn
+
         if not conn:
             self._signal_is_ready.clear()
             self._access_rights_valid[pvname] = False
 
         self._connection_states[pvname] = conn
 
-        if conn and not self._received_first_metadata[pvname]:
+        if newly_connected and not self._received_first_metadata[pvname]:
+            print('GET ALL METADATA', pvname, conn)
             pv.get_all_metadata_callback(self._initial_metadata_callback,
                                          timeout=10)
 
         self._set_event_if_ready()
 
-        if was_connected and not conn:
+        if newly_disconnected:
             # Send a notification of disconnection
             self._run_metadata_callbacks()
 
