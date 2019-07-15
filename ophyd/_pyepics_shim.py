@@ -95,7 +95,6 @@ class PyepicsShimPV(epics.PV):
             self.get_timevars(timeout=timeout)
         self.get_ctrlvars(timeout=timeout)
         md = self._args.copy()
-        md.pop('value', None)
         return md
 
     def get_all_metadata_callback(self, callback, *, timeout):
