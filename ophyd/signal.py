@@ -217,7 +217,8 @@ class Signal(OphydObject):
             md_for_callback['timestamp'] = timestamp
 
         self._run_subs(sub_type=self.SUB_VALUE, old_value=old_value,
-                       value=value, **md_for_callback)
+                       **md_for_callback)
+        self._run_subs(sub_type=self.SUB_META, **self._metadata)
 
     def set(self, value, *, timeout=None, settle_time=None):
         '''Set is like `put`, but is here for bluesky compatibility
@@ -1259,24 +1260,27 @@ class EpicsSignal(EpicsSignalBase):
                 precision=self._metadata['setpoint_precision'],
                 lower_ctrl_limit=self._metadata['lower_ctrl_limit'],
                 upper_ctrl_limit=self._metadata['upper_ctrl_limit'],
-                units=self._metadata['units'],
+                units=self._metadata['units']
+                value=self._metadata['setpoint_value'],
             )
         return metadata
 
-    def _write_changed(self, value=None, timestamp=None, **kwargs):
+    def _write_changed(self, timestamp=None, **kwargs):
         'CA monitor: callback indicating the setpoint PV value has changed'
         if timestamp is None:
             timestamp = time.time()
 
+        old_value = self._setpoint
+        self._setpoint = self._fix_type(kwargs.pop('value')
+        kwargs['setpoint_value'] = self._setpoint
+
+        # This runs the SUB_SETPOINT_META callback
         self._metadata_changed(self.setpoint_pvname, kwargs,
                                require_timestamp=True, from_monitor=True,
                                update=True)
 
-        old_value = self._setpoint
-        self._setpoint = self._fix_type(value)
-
         self._run_subs(sub_type=self.SUB_SETPOINT,
-                       old_value=old_value, value=value,
+                       old_value=old_value, value=self._setpoint,
                        timestamp=self._metadata['setpoint_timestamp'],
                        status=self._metadata['setpoint_status'],
                        severity=self._metadata['setpoint_severity'],
