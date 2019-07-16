@@ -71,7 +71,6 @@ class Signal(OphydObject):
         self.cl = cl
         self._dispatcher = cl.get_dispatcher()
         self._metadata_thread_ctx = self._dispatcher.get_thread_context('monitor')
-        self._readback = value
 
         if timestamp is None:
             timestamp = time.time()
@@ -91,7 +90,8 @@ class Signal(OphydObject):
             timestamp=timestamp,
             status=None,
             severity=None,
-            precision=None,
+            precision=None
+            value=value,
         )
 
         if metadata is not None:
@@ -206,6 +206,7 @@ class Signal(OphydObject):
 
         metadata = metadata.copy()
         metadata['timestamp'] = timestamp
+        metadata['value'] = value
         self._metadata.update(**metadata)
 
         md_for_callback = {key: metadata[key]
@@ -373,6 +374,14 @@ class Signal(OphydObject):
     def metadata(self):
         'A copy of the metadata dictionary associated with the signal'
         return self._metadata.copy()
+
+    @property
+    def _readback(self):
+        return self._metadata['value']
+
+    @_readback.setter
+    def _readback(self, value):
+        self._metadata['value'] = value
 
     def destroy(self):
         '''Disconnect the Signal from the underlying control layer; destroy it
