@@ -92,14 +92,16 @@ class SynSignal(Signal):
             # When triggered, just put the current value.
             func = self.get
             # Initialize readback with a None value
-            self._readback = None
+            value = None
+        else:
+            value = func()
         if loop is None:
             loop = asyncio.get_event_loop()
         self._func = func
         self.exposure_time = exposure_time
         self.precision = 3
         self.loop = loop
-        super().__init__(value=self._func(), timestamp=ttime.time(), name=name,
+        super().__init__(value=value, timestamp=ttime.time(), name=name,
                          parent=parent, labels=labels, kind=kind, **kwargs)
         self._metadata.update(
             connected=True,
