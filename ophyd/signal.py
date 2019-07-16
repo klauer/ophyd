@@ -90,7 +90,7 @@ class Signal(OphydObject):
             timestamp=timestamp,
             status=None,
             severity=None,
-            precision=None
+            precision=None,
             value=value,
         )
 
@@ -1260,7 +1260,7 @@ class EpicsSignal(EpicsSignalBase):
                 precision=self._metadata['setpoint_precision'],
                 lower_ctrl_limit=self._metadata['lower_ctrl_limit'],
                 upper_ctrl_limit=self._metadata['upper_ctrl_limit'],
-                units=self._metadata['units']
+                units=self._metadata['units'],
                 value=self._metadata['setpoint_value'],
             )
         return metadata
@@ -1271,7 +1271,7 @@ class EpicsSignal(EpicsSignalBase):
             timestamp = time.time()
 
         old_value = self._setpoint
-        self._setpoint = self._fix_type(kwargs.pop('value')
+        self._setpoint = self._fix_type(kwargs.pop('value'))
         kwargs['setpoint_value'] = self._setpoint
 
         # This runs the SUB_SETPOINT_META callback
