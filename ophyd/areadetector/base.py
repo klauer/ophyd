@@ -124,8 +124,7 @@ class NDDerivedSignal(DerivedSignal):
     def _array_shape_callback(self, **kwargs):
         value = self.inverse(self._derived_from.value)
         self._readback = value
-        self._run_subs(sub_type=self.SUB_VALUE, value=value,
-                       **self._metadata)
+        self._run_subs(sub_type=self.SUB_VALUE, **self._metadata)
 
 
 class ADComponent(Component):
