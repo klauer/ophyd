@@ -57,7 +57,8 @@ class Signal(OphydObject):
     SUB_META = 'meta'
     _default_sub = SUB_VALUE
     _metadata_keys = None
-    _core_metadata_keys = ('connected', 'read_access', 'write_access', 'timestamp')
+    _core_metadata_keys = ('connected', 'read_access', 'write_access',
+                           'timestamp', 'value')
 
     def __init__(self, *, name, value=0., timestamp=None, parent=None,
                  labels=None, kind=Kind.hinted, tolerance=None,
