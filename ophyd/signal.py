@@ -881,13 +881,13 @@ class EpicsSignalBase(Signal):
             metadata['timestamp'] = time.time()
         return metadata
 
-    def _read_changed(self, value=None, **kwargs):
+    def _read_changed(self, **kwargs):
         'CA monitor callback indicating that the read value has changed'
         metadata = self._metadata_changed(self.pvname, kwargs, update=False,
                                           require_timestamp=True,
                                           from_monitor=True)
         # super().put updates self._readback and runs SUB_VALUE
-        super().put(value=value, timestamp=metadata.pop('timestamp'),
+        super().put(value=kwargs['value'], timestamp=metadata.pop('timestamp'),
                     metadata=metadata, force=True)
 
     def describe(self):
