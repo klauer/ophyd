@@ -841,20 +841,22 @@ class EpicsSignalBase(Signal):
                                f'{timeout} sec')
 
         value = info.pop('value')
+
         if as_string:
             value = waveform_to_string(value)
-
+        info['value'] = self._fix_type(value)
         has_monitor = self._monitors[self.pvname] is not None
+        if not has_monitor:
+            # No monitor - readback can only be updated here
+            self._readback = value
+
         if form != 'time' or not has_monitor:
             # Different form such as 'ctrl' holds additional data not available
             # through the DBR_TIME channel access monitor
             self._metadata_changed(self.pvname, info, update=True,
                                    require_timestamp=True, from_monitor=False)
 
-        if not has_monitor:
-            # No monitor - readback can only be updated here
-            self._readback = value
-        return self._fix_type(value)
+        return info['value']
 
     def _fix_type(self, value):
         'Cast the given value according to the data type of this EpicsSignal'
