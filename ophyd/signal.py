@@ -1018,8 +1018,8 @@ class EpicsSignal(EpicsSignalBase):
 
     _metadata_keys = (EpicsSignalBase._metadata_keys +
                       ('setpoint_status', 'setpoint_severity',
-                       'setpoint_precision', 'setpoint_timestamp')
-                      )
+                       'setpoint_precision', 'setpoint_timestamp',
+                       'setpoint_value'))
 
     def __init__(self, read_pv, write_pv=None, *, put_complete=False,
                  string=False, limits=False, auto_monitor=False, name=None,
@@ -1028,7 +1028,6 @@ class EpicsSignal(EpicsSignalBase):
         self._write_pv = None
         self._use_limits = bool(limits)
         self._put_complete = put_complete
-        self._setpoint = None
 
         metadata = dict(
             setpoint_timestamp=None,
@@ -1036,6 +1035,7 @@ class EpicsSignal(EpicsSignalBase):
             setpoint_severity=None,
             lower_ctrl_limit=None,
             upper_ctrl_limit=None,
+            setpoint_value = None,
         )
 
         if write_pv is None:
@@ -1380,6 +1380,14 @@ class EpicsSignal(EpicsSignalBase):
         warnings.warn('Setting EpicsSignal.setpoint is deprecated and '
                       'will be removed')
         self.put(value)
+
+    @property
+    def _setpoint(self):
+        return self._metadata['setpoint_value']
+
+    @_setpoint.setter
+    def _setpoint(self, value):
+        self._metadata['setpoint_value'] = value
 
     @property
     def put_complete(self):
