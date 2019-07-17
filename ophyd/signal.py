@@ -159,7 +159,7 @@ class Signal(OphydObject):
 
     def get(self, **kwargs):
         '''The readback value'''
-        return self._readback
+        return self._metadata['value']
 
     def put(self, value, *, timestamp=None, force=False, metadata=None,
             **kwargs):
@@ -195,26 +195,20 @@ class Signal(OphydObject):
 
             self.check_value(value)
 
-        old_value = self._readback
-        self._readback = value
+        old_value = self._metadata['value']
 
-        if metadata is None:
-            metadata = {}
+        metadata = metadata.copy() if metadata is not None else {}
 
         if timestamp is None:
             timestamp = metadata.get('timestamp', time.time())
 
-        metadata = metadata.copy()
-        metadata['timestamp'] = timestamp
-        metadata['value'] = value
+        metadata.update(timestamp=timestamp,
+                        value=value)
         self._metadata.update(**metadata)
 
         md_for_callback = {key: metadata[key]
                            for key in self._metadata_keys
                            if key in metadata}
-
-        if 'timestamp' not in self._metadata_keys:
-            md_for_callback['timestamp'] = timestamp
 
         self._run_subs(sub_type=self.SUB_VALUE, old_value=old_value,
                        **md_for_callback)
@@ -268,10 +262,8 @@ class Signal(OphydObject):
     @property
     def value(self):
         '''The signal's value'''
-        if self._readback is not None:
-            return self._readback
-
-        return self.get()
+        value = self._metadata['value']
+        return value if value is not None else self.get()
 
     @value.setter
     def value(self, value):
@@ -375,14 +367,6 @@ class Signal(OphydObject):
     def metadata(self):
         'A copy of the metadata dictionary associated with the signal'
         return self._metadata.copy()
-
-    @property
-    def _readback(self):
-        return self._metadata['value']
-
-    @_readback.setter
-    def _readback(self, value):
-        self._metadata['value'] = value
 
     def destroy(self):
         '''Disconnect the Signal from the underlying control layer; destroy it
@@ -501,17 +485,19 @@ class DerivedSignal(Signal):
 
     def _derived_value_callback(self, value=None, **kwargs):
         'Main signal value updated - update the DerivedSignal'
-        value = self.inverse(value)
-        self._readback = value
-        updated_md = self._update_metadata_from_callback(**kwargs)
-        self._run_subs(sub_type=self.SUB_VALUE, value=value, **updated_md)
+        updated_md = self._update_metadata_from_callback(
+            value=self.inverse(value), **kwargs)
+        self._run_subs(sub_type=self.SUB_VALUE, **updated_md)
 
     def get(self, **kwargs):
         'Get the value from the original signal, with `inverse` applied to it'
         value = self._derived_from.get(**kwargs)
-        self._readback = self.inverse(value)
-        self._metadata['timestamp'] = self._derived_from.timestamp
-        return self._readback
+        value = self.inverse(value)
+        self._metadata.update(
+            timestamp=self._derived_from.timestamp,
+            value=value,
+        )
+        return value
 
     def inverse(self, value):
         '''Compute original signal value -> derived signal value'''
@@ -847,9 +833,6 @@ class EpicsSignalBase(Signal):
             value = waveform_to_string(value)
         info['value'] = self._fix_type(value)
         has_monitor = self._monitors[self.pvname] is not None
-        if not has_monitor:
-            # No monitor - readback can only be updated here
-            self._readback = value
 
         if form != 'time' or not has_monitor:
             # Different form such as 'ctrl' holds additional data not available
@@ -887,7 +870,7 @@ class EpicsSignalBase(Signal):
         metadata = self._metadata_changed(self.pvname, kwargs, update=False,
                                           require_timestamp=True,
                                           from_monitor=True)
-        # super().put updates self._readback and runs SUB_VALUE
+        # super().put updates value+metadata and runs SUB_VALUE
         super().put(value=kwargs['value'], timestamp=metadata.pop('timestamp'),
                     metadata=metadata, force=True)
 
@@ -1011,6 +994,7 @@ class EpicsSignal(EpicsSignalBase):
         severity=('setpoint_severity', AlarmSeverity),
         precision=('setpoint_precision', None),
         timestamp=('setpoint_timestamp', None),
+        value=('setpoint_value', None),
         # Override the readback ones, as we write to the setpoint:
         lower_ctrl_limit=('lower_ctrl_limit', None),
         upper_ctrl_limit=('upper_ctrl_limit', None),
@@ -1035,7 +1019,7 @@ class EpicsSignal(EpicsSignalBase):
             setpoint_severity=None,
             lower_ctrl_limit=None,
             upper_ctrl_limit=None,
-            setpoint_value = None,
+            setpoint_value=None,
         )
 
         if write_pv is None:
@@ -1214,9 +1198,6 @@ class EpicsSignal(EpicsSignalBase):
             self._metadata_changed(self.setpoint_pvname, info, update=True,
                                    from_monitor=False, require_timestamp=True)
 
-        if not has_monitor:
-            # No monitor - setpoint can only be updated here
-            self._setpoint = self._fix_type(value)
         return self._fix_type(value)
 
     def _pv_access_callback(self, read_access, write_access, pv):
@@ -1270,9 +1251,8 @@ class EpicsSignal(EpicsSignalBase):
         if timestamp is None:
             timestamp = time.time()
 
-        old_value = self._setpoint
-        self._setpoint = self._fix_type(kwargs.pop('value'))
-        kwargs['setpoint_value'] = self._setpoint
+        old_value = self._metadata['setpoint_value']
+        kwargs['value'] = self._fix_type(kwargs['value'])
 
         # This runs the SUB_SETPOINT_META callback
         self._metadata_changed(self.setpoint_pvname, kwargs,
@@ -1280,7 +1260,7 @@ class EpicsSignal(EpicsSignalBase):
                                update=True)
 
         self._run_subs(sub_type=self.SUB_SETPOINT,
-                       old_value=old_value, value=self._setpoint,
+                       old_value=old_value, value=self._metadata['setpoint_value'],
                        timestamp=self._metadata['setpoint_timestamp'],
                        status=self._metadata['setpoint_status'],
                        severity=self._metadata['setpoint_severity'],
@@ -1319,8 +1299,10 @@ class EpicsSignal(EpicsSignalBase):
         self._write_pv.put(value, use_complete=use_complete, callback=callback,
                            **kwargs)
 
-        old_value = self._setpoint
-        self._setpoint = value
+        old_value = self._metadata['setpoint_value']
+        self._metadata_changed(self.setpoint_pvname, dict(value=value),
+                               from_monitor=False, update=True,
+                               require_timestamp=True)
 
         if self.pvname == self.setpoint_pvname:
             timestamp = time.time()
@@ -1370,24 +1352,14 @@ class EpicsSignal(EpicsSignalBase):
     @property
     def setpoint(self):
         '''The setpoint PV value'''
-        if self._setpoint is not None:
-            return self._setpoint
-
-        return self.get_setpoint()
+        value = self._metadata['setpoint_value']
+        return value if value is not None else self.get_setpoint()
 
     @setpoint.setter
     def setpoint(self, value):
         warnings.warn('Setting EpicsSignal.setpoint is deprecated and '
                       'will be removed')
         self.put(value)
-
-    @property
-    def _setpoint(self):
-        return self._metadata['setpoint_value']
-
-    @_setpoint.setter
-    def _setpoint(self, value):
-        self._metadata['setpoint_value'] = value
 
     @property
     def put_complete(self):
@@ -1470,8 +1442,9 @@ class AttributeSignal(Signal):
 
     def get(self, **kwargs):
         'Get the value from the associated attribute'
-        self._readback = getattr(self.base, self.attr)
-        return self._readback
+        value = getattr(self.base, self.attr)
+        self.metadata['value'] = value
+        return value
 
     def put(self, value, **kwargs):
         'Write to the associated attribute'
