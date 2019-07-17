@@ -212,7 +212,6 @@ class Signal(OphydObject):
 
         self._run_subs(sub_type=self.SUB_VALUE, old_value=old_value,
                        **md_for_callback)
-        self._run_subs(sub_type=self.SUB_META, **self._metadata)
 
     def set(self, value, *, timeout=None, settle_time=None):
         '''Set is like `put`, but is here for bluesky compatibility
