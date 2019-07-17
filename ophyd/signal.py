@@ -483,6 +483,8 @@ class DerivedSignal(Signal):
     def _derived_metadata_callback(self, *, connected, read_access,
                                    write_access, timestamp, **kwargs):
         'Main signal metadata updated - update the DerivedSignal'
+        # Ensure the SUB_META subscription gets the correct object
+        kwargs.pop('obj')
         self._update_metadata_from_callback(connected=connected,
                                             read_access=read_access,
                                             write_access=write_access,
@@ -492,6 +494,7 @@ class DerivedSignal(Signal):
 
     def _derived_value_callback(self, value=None, **kwargs):
         'Main signal value updated - update the DerivedSignal'
+        kwargs.pop('obj')
         updated_md = self._update_metadata_from_callback(
             value=self.inverse(value), **kwargs)
         self._run_subs(sub_type=self.SUB_VALUE, **updated_md)
