@@ -441,12 +441,13 @@ class DerivedSignal(Signal):
             # set up the initial timestamp reporting, if connected
             self._metadata['timestamp'] = derived_from.timestamp
 
-        derived_from.subscribe(self._derived_value_callback,
-                               event_type=self.SUB_VALUE,
-                               run=self.connected)
-        derived_from.subscribe(self._derived_metadata_callback,
-                               event_type=self.SUB_META,
-                               run=self.connected)
+        self._value_cid = derived_from.subscribe(
+            self._derived_value_callback, event_type=self.SUB_VALUE,
+            run=self.connected)
+
+        self._meta_cid = derived_from.subscribe(
+            self._derived_metadata_callback, event_type=self.SUB_META,
+            run=self.connected)
 
     @property
     def derived_from(self):
@@ -461,6 +462,12 @@ class DerivedSignal(Signal):
         derived_desc = self._derived_from.describe()[self._derived_from.name]
         derived_desc.update(desc)
         return {self.name: derived_desc}
+
+    def destroy(self):
+        'Destroy the Signal, removing all subscriptions'
+        self._derived_from.unsubscribe(self._value_cid)
+        self._derived_from.unsubscribe(self._meta_cid)
+        super().destroy()
 
     def _update_metadata_from_callback(self, **kwargs):
         updated_md = {key: kwargs[key] for key in self.metadata_keys

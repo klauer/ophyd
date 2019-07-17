@@ -358,6 +358,7 @@ def test_soft_derived():
     assert copied.derived_from.value == original.value
     assert copied.derived_from.timestamp == original.timestamp
     assert copied.derived_from.name == original.name
+    copied.destroy()
 
     derived.put('s')
     assert cb_values == ['r', 's']
